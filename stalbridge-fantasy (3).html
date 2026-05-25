@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Stalbridge CC Fantasy Cricket</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--cream:#F5F0E8;--green:#1C3A2B;--green-mid:#2D5A3D;--green-light:#4A7C5A;--gold:#C9A84C;--gold-light:#E8C96A;--red:#8B2020;--white:#FFFFFF;--border:rgba(28,58,43,0.15);--text:#1C3A2B;--text-mid:#4A6355;--text-light:#7A9385;--shadow:0 4px 24px rgba(28,58,43,0.10)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);min-height:100vh}
+.header{background:var(--green);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:64px;position:sticky;top:0;z-index:100;box-shadow:0 2px 16px rgba(0,0,0,0.2)}
+.logo{font-family:'Playfair Display',serif;font-size:20px;color:var(--gold);letter-spacing:0.02em;font-weight:700}
+.logo span{color:var(--cream);font-weight:400;font-size:14px;display:block;letter-spacing:0.08em;font-family:'DM Sans',sans-serif}
+.nav{display:flex;gap:4px}
+.nav-btn{background:none;border:none;color:rgba(245,240,232,0.6);font-size:13px;padding:8px 14px;border-radius:6px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500;transition:all 0.2s}
+.nav-btn:hover,.nav-btn.active{background:rgba(201,168,76,0.2);color:var(--gold)}
+.admin-badge{background:var(--gold);color:var(--green);font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;font-family:'DM Mono',monospace;letter-spacing:0.04em;cursor:pointer}
+.page{display:none!important;padding:2rem;max-width:1100px;margin:0 auto}
+.page.active{display:block!important}
+.hero{background:var(--green);border-radius:16px;padding:2.5rem;margin-bottom:1.5rem;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-40px;right:-40px;width:240px;height:240px;border:2px solid rgba(201,168,76,0.2);border-radius:50%}
+.hero::after{content:'';position:absolute;top:-20px;right:-20px;width:180px;height:180px;border:2px solid rgba(201,168,76,0.1);border-radius:50%}
+.hero-title{font-family:'Playfair Display',serif;font-size:32px;color:var(--cream);font-weight:900;line-height:1.1;margin-bottom:6px}
+.hero-sub{color:var(--gold);font-size:14px;letter-spacing:0.06em;font-weight:500;margin-bottom:1.5rem}
+.hero-stats{display:flex;gap:2rem;flex-wrap:wrap}
+.hero-stat{text-align:center}
+.hero-stat-val{font-family:'Playfair Display',serif;font-size:28px;color:var(--gold);font-weight:700}
+.hero-stat-lbl{font-size:11px;color:rgba(245,240,232,0.6);letter-spacing:0.06em;margin-top:2px}
+.card{background:var(--white);border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1rem;box-shadow:var(--shadow);border:1px solid var(--border)}
+.card-title{font-family:'Playfair Display',serif;font-size:16px;color:var(--green);margin-bottom:1rem;font-weight:700}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
+@media(max-width:700px){.grid-2,.grid-3{grid-template-columns:1fr}.hero-stats{gap:1rem}}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:11px;font-weight:600;color:var(--text-light);padding:8px 10px;border-bottom:1px solid var(--border);letter-spacing:0.05em;text-transform:uppercase}
+td{padding:10px 10px;border-bottom:1px solid rgba(28,58,43,0.06);color:var(--text)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(28,58,43,0.02)}
+.rank{font-family:'DM Mono',monospace;font-weight:500;color:var(--text-light);width:28px}
+.rank-1{color:var(--gold);font-weight:700}
+.rank-2{color:#888}
+.rank-3{color:#A0724A}
+.manager-name{font-weight:600}
+.pts-total{font-family:'DM Mono',monospace;font-weight:500;color:var(--green)}
+.pts-week{font-family:'DM Mono',monospace;font-size:12px;color:var(--text-light)}
+.badge{font-size:11px;padding:2px 8px;border-radius:99px;font-weight:600;display:inline-block}
+.b-bat{background:#E8F1FB;color:#1A4F8A}
+.b-bowl{background:#FAEAEA;color:#7A1F1F}
+.b-ar{background:#EAF5E8;color:#1C5A2B}
+.b-wk{background:#FEF5E0;color:#7A5010}
+.b-high{background:#EAF5E8;color:#1C5A2B}
+.b-med{background:#FEF5E0;color:#7A5010}
+.b-low{background:#FAEAEA;color:#7A1F1F}
+.price-gold{color:var(--gold);font-family:'DM Mono',monospace;font-weight:600}
+.price-green{color:var(--green-mid);font-family:'DM Mono',monospace;font-weight:500}
+.price-grey{color:var(--text-light);font-family:'DM Mono',monospace}
+.btn{background:var(--green);color:var(--cream);border:none;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.2s}
+.btn:hover{background:var(--green-mid)}
+.btn-gold{background:var(--gold);color:var(--green)}
+.btn-gold:hover{background:var(--gold-light)}
+.btn-sm{padding:6px 14px;font-size:12px}
+.btn-outline{background:transparent;border:1px solid var(--green);color:var(--green)}
+.btn-outline:hover{background:var(--green);color:var(--cream)}
+.btn-danger{background:#FAEAEA;color:var(--red);border:1px solid var(--red)}
+input,select,textarea{font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--white);color:var(--text);width:100%;outline:none;transition:border 0.2s}
+input:focus,select:focus{border-color:var(--green)}
+label{font-size:12px;font-weight:600;color:var(--text-mid);display:block;margin-bottom:4px;letter-spacing:0.03em}
+.form-row{margin-bottom:12px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:600px){.form-grid{grid-template-columns:1fr}}
+.player-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:1rem}
+.player-card{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;transition:all 0.2s;position:relative}
+.player-card:hover{border-color:var(--green);box-shadow:0 2px 12px rgba(28,58,43,0.12)}
+.player-card.starter{border-color:var(--green);background:#F0F7F2}
+.player-card.bench-player{border-color:var(--gold);background:#FEFAF0}
+.player-card.disabled{opacity:0.4;cursor:not-allowed}
+.player-card-name{font-weight:600;font-size:13px;margin-bottom:4px}
+.player-sel-indicator{position:absolute;top:8px;right:8px;width:18px;height:18px;border-radius:50%;background:var(--green);display:none;align-items:center;justify-content:center;font-size:10px;color:white}
+.player-card.starter .player-sel-indicator,.player-card.bench-player .player-sel-indicator{display:flex}
+.cap-label{position:absolute;bottom:8px;right:8px;font-size:9px;font-weight:700;letter-spacing:0.05em;padding:1px 5px;border-radius:3px}
+.cap-c{background:var(--gold);color:var(--green)}
+.cap-vc{background:var(--green);color:var(--cream)}
+.budget-bar-wrap{background:rgba(28,58,43,0.08);border-radius:99px;height:8px;margin:8px 0}
+.budget-bar{height:8px;border-radius:99px;background:var(--green);transition:width 0.3s}
+.budget-bar.warning{background:var(--gold)}
+.budget-bar.over{background:var(--red)}
+.pitch{background:linear-gradient(180deg,#2D6A3F 0%,#3A7A4F 50%,#2D6A3F 100%);border-radius:12px;padding:1.5rem;margin-bottom:1rem;position:relative;min-height:300px}
+.pitch-row{display:flex;justify-content:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.pitch-player{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);border-radius:8px;padding:8px 10px;text-align:center;min-width:90px;cursor:pointer;transition:all 0.2s;backdrop-filter:blur(4px)}
+.pitch-player:hover{background:rgba(255,255,255,0.25)}
+.pitch-player.is-captain{border-color:var(--gold);background:rgba(201,168,76,0.25)}
+.pitch-player.is-vc{border-color:rgba(201,168,76,0.5);background:rgba(201,168,76,0.12)}
+.pitch-player-name{font-size:11px;font-weight:600;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px}
+.pitch-player-price{font-size:10px;color:var(--gold-light);font-family:'DM Mono',monospace}
+.pitch-label{font-size:10px;color:rgba(255,255,255,0.5);letter-spacing:0.06em;text-transform:uppercase;text-align:center;margin:4px 0}
+.stat-box{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;text-align:center}
+.stat-val{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;color:var(--green)}
+.stat-lbl{font-size:11px;color:var(--text-light);letter-spacing:0.05em;margin-top:2px;text-transform:uppercase}
+.form-dots{display:flex;gap:3px;margin-top:4px}
+.dot{width:8px;height:8px;border-radius:50%}
+.dot-high{background:#2D7A3D}
+.dot-mid{background:var(--gold)}
+.dot-low{background:var(--red)}
+.dot-none{background:#DDD}
+.tabs{display:flex;gap:4px;margin-bottom:1.5rem;border-bottom:1px solid var(--border);padding-bottom:0}
+.tab{background:none;border:none;font-size:13px;font-weight:500;padding:8px 16px;cursor:pointer;color:var(--text-light);border-bottom:2px solid transparent;margin-bottom:-1px;font-family:'DM Sans',sans-serif;transition:all 0.2s}
+.tab.active{color:var(--green);border-bottom-color:var(--green);font-weight:600}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--green);color:var(--cream);padding:12px 20px;border-radius:10px;font-size:13px;font-weight:500;z-index:999;transform:translateY(100px);opacity:0;transition:all 0.3s;max-width:300px}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.error{background:var(--red)}
+.toast.gold{background:var(--gold);color:var(--green)}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center;padding:1rem}
+.modal-overlay.open{display:flex}
+.modal{background:var(--cream);border-radius:16px;padding:2rem;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
+.modal-title{font-family:'Playfair Display',serif;font-size:20px;color:var(--green);margin-bottom:1.5rem;font-weight:700}
+.week-badge{display:inline-block;background:var(--gold);color:var(--green);font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;font-family:'DM Mono',monospace;letter-spacing:0.04em}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--green);color:var(--cream);font-size:12px;font-weight:600;padding:4px 12px;border-radius:99px;cursor:pointer;transition:all 0.2s}
+.chip:hover{background:var(--green-mid)}
+.chip.used{background:#CCC;color:#888;cursor:not-allowed}
+.chip.gold{background:var(--gold);color:var(--green)}
+.price-up{color:#2D7A3D;font-size:11px;font-weight:600}
+.price-dn{color:var(--red);font-size:11px;font-weight:600}
+.price-same{color:var(--text-light);font-size:11px}
+.admin-section{background:linear-gradient(135deg,#1C3A2B,#2D5A3D);border-radius:12px;padding:1.5rem;margin-bottom:1rem;color:var(--cream)}
+.admin-section h3{font-family:'Playfair Display',serif;font-size:18px;color:var(--gold);margin-bottom:1rem}
+.score-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.1);font-size:13px}
+.score-row:last-child{border-bottom:none}
+.score-row input{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.2);color:white;padding:6px 8px}
+.score-row input:focus{border-color:var(--gold);background:rgba(255,255,255,0.15)}
+.score-header{font-size:10px;color:rgba(201,168,76,0.8);font-weight:600;letter-spacing:0.05em;text-transform:uppercase}
+.loading-screen{position:fixed;inset:0;background:var(--green);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;transition:opacity 0.5s}
+.loading-screen.hidden{opacity:0;pointer-events:none}
+.loading-logo{font-family:'Playfair Display',serif;font-size:36px;color:var(--gold);font-weight:900;margin-bottom:8px}
+.loading-sub{color:rgba(245,240,232,0.6);font-size:14px;letter-spacing:0.1em;margin-bottom:2rem}
+.loading-spinner{width:32px;height:32px;border:3px solid rgba(201,168,76,0.3);border-top-color:var(--gold);border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(28,58,43,0.2);border-radius:99px}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-screen" id="loading-screen">
+  <div class="loading-logo">Stalbridge CC</div>
+  <div class="loading-sub">FANTASY CRICKET 2026</div>
+  <div class="loading-spinner"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-register">
+  <div class="modal">
+    <div class="modal-title">Join the League</div>
+    <div class="form-row"><label>Your name</label><input id="reg-name" placeholder="e.g. James Harris"/></div>
+    <div class="form-row"><label>Team name</label><input id="reg-team" placeholder="e.g. Sweatman's XI"/></div>
+    <div style="display:flex;gap:10px;margin-top:1rem">
+      <button class="btn btn-gold" onclick="registerManager()">Join League</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-register')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-admin">
+  <div class="modal">
+    <div class="modal-title">Admin Access</div>
+    <div class="form-row"><label>Admin Password</label><input type="password" id="admin-pw" placeholder="Enter password" onkeydown="if(event.key==='Enter')checkAdmin()"/></div>
+    <div style="display:flex;gap:10px;margin-top:1rem">
+      <button class="btn btn-gold" onclick="checkAdmin()">Enter</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-admin')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-captain">
+  <div class="modal">
+    <div class="modal-title">Set Captain & Vice-Captain</div>
+    <p style="font-size:13px;color:var(--text-mid);margin-bottom:1rem">Captain scores x1.5. If they don't play, vice-captain gets the multiplier automatically.</p>
+    <div class="form-row"><label>Captain</label><select id="cap-select"></select></div>
+    <div class="form-row"><label>Vice-Captain</label><select id="vc-select"></select></div>
+    <div style="display:flex;gap:10px;margin-top:1rem">
+      <button class="btn btn-gold" onclick="saveCaptains()">Save</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-captain')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-transfer">
+  <div class="modal">
+    <div class="modal-title">Make a Transfer</div>
+    <p style="font-size:13px;color:var(--text-mid);margin-bottom:1rem" id="transfer-info-text"></p>
+    <div class="form-row"><label>Player to remove</label><select id="transfer-out"></select></div>
+    <div class="form-row"><label>Player to bring in</label><select id="transfer-in" onchange="updateTransferCost()"></select></div>
+    <div id="transfer-cost-info" style="font-size:13px;margin:8px 0;color:var(--text-mid)"></div>
+    <div style="display:flex;gap:10px;margin-top:1rem">
+      <button class="btn btn-gold" onclick="confirmTransfer()">Confirm Transfer</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-transfer')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo">Stalbridge CC <span>FANTASY CRICKET 2026</span></div>
+  <div class="nav">
+    <button class="nav-btn active" onclick="showPage('home',this)">Home</button>
+    <button class="nav-btn" onclick="showPage('standings',this)">Standings</button>
+    <button class="nav-btn" onclick="showPage('players',this)">Players</button>
+    <button class="nav-btn" onclick="showPage('myteam',this)">My Team</button>
+    <button class="nav-btn" onclick="showPage('admin',this)" id="admin-nav" style="display:none">Admin</button>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <span id="current-manager-label" style="font-size:12px;color:rgba(245,240,232,0.6)"></span>
+    <div class="admin-badge" onclick="openModal('modal-admin')" id="admin-btn">ADMIN</div>
+  </div>
+</div>
+
+<!-- HOME -->
+<div class="page active" id="page-home">
+  <div class="hero">
+    <div class="hero-title">Stalbridge CC<br/>Fantasy Cricket</div>
+    <div class="hero-sub">SEASON 2026 · SATURDAY LEAGUE</div>
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="hero-stat-val" id="h-week">—</div><div class="hero-stat-lbl">Current Week</div></div>
+      <div class="hero-stat"><div class="hero-stat-val" id="h-managers">—</div><div class="hero-stat-lbl">Managers</div></div>
+      <div class="hero-stat"><div class="hero-stat-val" id="h-leader">—</div><div class="hero-stat-lbl">League Leader</div></div>
+      <div class="hero-stat"><div class="hero-stat-val" id="h-topscore">—</div><div class="hero-stat-lbl">Top Score This Wk</div></div>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Get Started</div>
+      <p style="font-size:13px;color:var(--text-mid);margin-bottom:1rem">Pick your squad of 13 players within a £60m budget. Choose 11 starters and 2 bench players each week.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-gold" id="btn-join" onclick="openModal('modal-register')">Join the League</button>
+        <button class="btn btn-outline" onclick="showPage('myteam',document.querySelectorAll('.nav-btn')[3])">My Team</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">League Rules</div>
+      <div style="font-size:13px;color:var(--text-mid);line-height:1.8">
+        💰 £60m budget · 13 players (11+2 bench)<br/>
+        🏏 Min 3 bowlers · Min 2 batters · Max 2 keepers<br/>
+        ⭐ Captain x1.5 · VC covers if captain DNP<br/>
+        🔄 1 free transfer/week · Extra = -4 pts each<br/>
+        🃏 1 Wildcard per season · Full free reset
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Top Performers This Week</div>
+    <div id="top-performers-home"><p style="font-size:13px;color:var(--text-light);font-style:italic">No scores entered yet for this week.</p></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Points System</div>
+    <div class="grid-3" style="font-size:13px;gap:1.5rem">
+      <div><div style="font-weight:600;color:var(--green);margin-bottom:8px">🏏 Batting</div><div style="color:var(--text-mid);line-height:2">Run +1 · 25 bonus +5 · 50 bonus +10 · 100 bonus +20 · Duck -5</div></div>
+      <div><div style="font-weight:600;color:var(--green);margin-bottom:8px">🎯 Bowling</div><div style="color:var(--text-mid);line-height:2">Wicket +20 · 3-wkt +10 · 5-wkt +20 · Maiden +4 · Economy ≤4 +8</div></div>
+      <div><div style="font-weight:600;color:var(--green);margin-bottom:8px">🧤 Fielding</div><div style="color:var(--text-mid);line-height:2">Catch +8 · Run out +10 · Assist +5 · Stumping +12 · Playing +3 · MoM +15</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- STANDINGS -->
+<div class="page" id="page-standings">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem">
+    <div>
+      <div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--green)">League Standings</div>
+      <div id="standings-sub" style="font-size:13px;color:var(--text-light);margin-top:2px"></div>
+    </div>
+    <span class="week-badge" id="standings-week-badge">Week 0</span>
+  </div>
+  <div class="card">
+    <table>
+      <thead><tr><th>Pos</th><th>Manager</th><th>Team</th><th>This Week</th><th>Total</th><th>Wildcard</th></tr></thead>
+      <tbody id="standings-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- PLAYERS -->
+<div class="page" id="page-players">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:1rem">
+    <div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--green)">Player Database</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <select id="filter-role" onchange="renderPlayers()" style="width:auto">
+        <option value="">All roles</option><option value="Batter">Batters</option><option value="Bowler">Bowlers</option><option value="All-rounder">All-rounders</option><option value="WK">Keepers</option>
+      </select>
+      <input id="filter-search" placeholder="Search..." oninput="renderPlayers()" style="width:140px"/>
+    </div>
+  </div>
+  <div class="card" style="overflow-x:auto">
+    <table>
+      <thead><tr><th>Player</th><th>Role</th><th>Price</th><th>Bat Avg</th><th>Wkts</th><th>Bowl Avg</th><th>Form (3wk)</th><th>Price Trend</th></tr></thead>
+      <tbody id="players-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- MY TEAM -->
+<div class="page" id="page-myteam">
+  <div id="myteam-no-manager" style="display:none">
+    <div class="card" style="text-align:center;padding:3rem">
+      <div style="font-family:'Playfair Display',serif;font-size:20px;color:var(--green);margin-bottom:1rem">Join the League First</div>
+      <p style="color:var(--text-mid);margin-bottom:1.5rem">Register as a manager to pick your team.</p>
+      <button class="btn btn-gold" onclick="openModal('modal-register')">Join the League</button>
+    </div>
+  </div>
+  <div id="myteam-main" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;flex-wrap:wrap;gap:1rem">
+      <div>
+        <div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--green)" id="myteam-name">My Team</div>
+        <div style="font-size:13px;color:var(--text-light)" id="myteam-manager"></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap" id="myteam-actions"></div>
+    </div>
+    <div class="card" style="padding:1rem 1.5rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:8px">
+        <div style="font-size:13px;font-weight:600;color:var(--green)">Budget remaining</div>
+        <div style="font-family:'DM Mono',monospace;font-size:18px;font-weight:600" id="budget-display">£60.0m</div>
+      </div>
+      <div class="budget-bar-wrap"><div class="budget-bar" id="budget-bar" style="width:100%"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-light);margin-top:4px">
+        <span id="squad-count">0/13 players</span>
+        <span id="transfer-info-bar"></span>
+      </div>
+    </div>
+    <div class="card" style="padding:1rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <div class="card-title" style="margin:0">Your Squad</div>
+        <button class="btn btn-sm" onclick="openCaptainModal()">Set Captain</button>
+      </div>
+      <div class="pitch" id="pitch-view">
+        <div class="pitch-label">STARTERS</div>
+        <div id="pitch-starters" class="pitch-row"></div>
+        <div class="pitch-label" style="margin-top:12px">BENCH</div>
+        <div id="pitch-bench" class="pitch-row"></div>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="showSubTab('pick',this)">Pick Players</button>
+      <button class="tab" onclick="showSubTab('transfers',this)">Transfers</button>
+    </div>
+    <div id="subtab-pick">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem">
+        <select id="pick-role" onchange="renderPickPlayers()" style="width:auto">
+          <option value="">All roles</option><option value="Batter">Batters</option><option value="Bowler">Bowlers</option><option value="All-rounder">All-rounders</option><option value="WK">Keepers</option>
+        </select>
+        <select id="pick-xi" onchange="renderPickPlayers()" style="width:auto">
+          <option value="">Both XIs</option><option value="1st">1st XI</option><option value="2nd">2nd XI</option>
+        </select>
+        <input id="pick-search" placeholder="Search player..." oninput="renderPickPlayers()" style="width:150px"/>
+        <select id="pick-sort" onchange="renderPickPlayers()" style="width:auto">
+          <option value="price">Sort: Price</option><option value="form">Sort: Form</option><option value="batavg">Sort: Bat avg</option><option value="wkts">Sort: Wickets</option>
+        </select>
+      </div>
+      <div id="pick-player-grid" class="player-grid"></div>
+    </div>
+    <div id="subtab-transfers" style="display:none">
+      <div class="card">
+        <div class="card-title">Transfer Window</div>
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem">
+          <div class="stat-box" style="flex:1;min-width:120px;padding:1rem"><div class="stat-val" style="font-size:20px" id="free-transfers-display">1</div><div class="stat-lbl">Free Transfers</div></div>
+          <div class="stat-box" style="flex:1;min-width:120px;padding:1rem"><div class="stat-val" style="font-size:20px" id="wildcard-display">✓</div><div class="stat-lbl">Wildcard</div></div>
+          <div class="stat-box" style="flex:1;min-width:120px;padding:1rem"><div class="stat-val" style="font-size:20px" id="transfer-cost-display">0</div><div class="stat-lbl">Pts Cost This Wk</div></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" onclick="openTransferModal()">Make Transfer</button>
+          <button class="btn btn-gold" id="wildcard-btn" onclick="activateWildcard()">Play Wildcard</button>
+        </div>
+        <div style="margin-top:1rem;font-size:12px;color:var(--text-light)">1 free transfer per week. Extra transfers cost 4 pts each. Wildcard resets your full squad for free — once per season.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div class="page" id="page-admin">
+  <div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--green);margin-bottom:1.5rem">Admin Panel</div>
+  <div class="tabs">
+    <button class="tab active" onclick="showAdminTab('scores',this)">Enter Scores</button>
+    <button class="tab" onclick="showAdminTab('manage',this)">Manage Week</button>
+    <button class="tab" onclick="showAdminTab('players-admin',this)">Edit Players</button>
+  </div>
+  <div id="admin-scores">
+    <div class="admin-section">
+      <h3>Enter Weekly Scores</h3>
+      <div style="margin-bottom:1rem;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <div style="font-size:13px;color:rgba(245,240,232,0.7)">Week:</div>
+        <input id="score-week" type="number" value="1" min="1" max="30" style="width:70px;background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.2);color:white"/>
+      </div>
+      <div class="score-row" style="padding-bottom:8px">
+        <div class="score-header">Player</div><div class="score-header">Runs</div><div class="score-header">Wkts</div><div class="score-header">Maidens</div><div class="score-header">Catches</div><div class="score-header">RO</div><div class="score-header">Duck?</div><div class="score-header">MoM?</div>
+      </div>
+      <div id="score-entry-rows"></div>
+      <div style="margin-top:1rem;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-gold" onclick="submitScores()">Submit Week's Scores</button>
+        <button class="btn btn-outline" style="border-color:rgba(255,255,255,0.3);color:rgba(245,240,232,0.7)" onclick="clearScoreForm()">Clear</button>
+      </div>
+    </div>
+  </div>
+  <div id="admin-manage" style="display:none">
+    <div class="card">
+      <div class="card-title">Week Management</div>
+      <div style="font-size:13px;color:var(--text-mid);margin-bottom:1rem">Current week: <strong id="current-week-display">0</strong></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn" onclick="advanceWeek()">Advance to Next Week</button>
+        <button class="btn btn-danger" onclick="resetWeekTransfers()">Reset Week Transfers</button>
+      </div>
+      <div style="margin-top:1.5rem"><div class="card-title" style="font-size:14px">Registered Managers</div><div id="managers-list" style="margin-top:8px"></div></div>
+    </div>
+  </div>
+  <div id="admin-players-admin" style="display:none">
+    <div class="card">
+      <div class="card-title">Add New Player</div>
+      <div class="form-grid">
+        <div class="form-row"><label>Name</label><input id="new-player-name" placeholder="First Last"/></div>
+        <div class="form-row"><label>Role</label><select id="new-player-role"><option>Batter</option><option>Bowler</option><option>All-rounder</option><option>WK</option></select></div>
+        <div class="form-row"><label>XI</label><select id="new-player-xi"><option>1st</option><option>2nd</option><option>Both</option></select></div>
+        <div class="form-row"><label>Price (£m)</label><input id="new-player-price" type="number" step="0.5" value="5.0"/></div>
+        <div class="form-row"><label>Bat Avg</label><input id="new-player-batavg" type="number" step="0.1"/></div>
+        <div class="form-row"><label>Wickets</label><input id="new-player-wkts" type="number"/></div>
+        <div class="form-row"><label>Bowl Avg</label><input id="new-player-bowlavg" type="number" step="0.1"/></div>
+        <div class="form-row"><label>Availability</label><select id="new-player-avail"><option value="high">High</option><option value="med">Medium</option><option value="low">Low</option></select></div>
+      </div>
+      <button class="btn btn-gold" onclick="addNewPlayer()" style="margin-top:8px">Add Player</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Edit Player Prices & Availability</div>
+      <div style="overflow-x:auto"><table>
+        <thead><tr><th>Player</th><th>Price</th><th>New Price</th><th>Availability</th><th></th></tr></thead>
+        <tbody id="admin-player-table"></tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════
+// SUPABASE
+// ═══════════════════════════════════
+const SUPABASE_URL = 'https://byjbvkpunbtuakrcgiax.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ5amJ2a3B1bmJ0dWFrcmNnaWF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2NTE0MTAsImV4cCI6MjA5NTIyNzQxMH0.LiPxT-4otP33DhPzY1mf3bcMmAmb6SY7PGOLZBg8ubM';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const BUDGET = 60;
+const ADMIN_PASSWORD = 'stalbridge2026';
+const SQUAD_SIZE = 13;
+const STARTERS = 11;
+
+// Local session state
+let isAdmin = false;
+let currentManagerId = localStorage.getItem('stalbridge_manager_id') || null;
+
+// In-memory cache
+let players = [];
+let managers = [];
+let weekScores = {}; // {week: {playerId: scoreObj}}
+let currentWeek = 0;
+
+// ═══════════════════════════════════
+// DEFAULT PLAYERS
+// ═══════════════════════════════════
+const DEFAULT_PLAYERS = [
+  {id:'p1',name:'Simon Sweatman',role:'All-rounder',xi:'1st',batavg:22.4,runs:449,wkts:23,bowlavg:19.7,avail:'high',price:9.5,base_price:9.5,note:'1st XI captain'},
+  {id:'p2',name:'Andy Dike',role:'All-rounder',xi:'2nd',batavg:56.0,runs:1344,wkts:22,bowlavg:26.3,avail:'high',price:10.0,base_price:10.0,note:'2nd XI captain'},
+  {id:'p3',name:'Steve Forshaw',role:'Bowler',xi:'1st',batavg:16.1,runs:257,wkts:42,bowlavg:17.8,avail:'high',price:9.0,base_price:9.0,note:'Ex-Dorset, supreme wicket-taker'},
+  {id:'p4',name:'Joshua Lewis',role:'Batter',xi:'1st',batavg:19.1,runs:458,wkts:6,bowlavg:14.0,avail:'high',price:7.5,base_price:7.5,note:'Talented young 1st XI opener'},
+  {id:'p5',name:'Neil Ford',role:'Bowler',xi:'1st',batavg:6.6,runs:106,wkts:35,bowlavg:20.9,avail:'high',price:8.0,base_price:8.0,note:'Workhorse 1st XI bowler'},
+  {id:'p6',name:'Fred Chant',role:'All-rounder',xi:'1st',batavg:null,runs:null,wkts:null,bowlavg:null,avail:'high',price:8.0,base_price:8.0,note:'Quality returning spinner'},
+  {id:'p7',name:'Edward Pattle',role:'Bowler',xi:'1st',batavg:13.6,runs:163,wkts:19,bowlavg:26.6,avail:'med',price:7.0,base_price:7.0,note:'1st XI bowler'},
+  {id:'p8',name:'George Coleman',role:'WK',xi:'1st',batavg:31.7,runs:317,wkts:0,bowlavg:null,avail:'med',price:7.5,base_price:7.5,note:'Explosive batter/keeper'},
+  {id:'p9',name:'Harry Forshaw',role:'Bowler',xi:'1st',batavg:8.1,runs:57,wkts:33,bowlavg:25.0,avail:'high',price:7.0,base_price:7.0,note:'Young prolific wicket-taker'},
+  {id:'p10',name:'Oscar Moore',role:'Bowler',xi:'1st',batavg:6.9,runs:83,wkts:31,bowlavg:24.0,avail:'med',price:7.0,base_price:7.0,note:'1st XI spinner, back from uni soon'},
+  {id:'p11',name:'Chris Warne',role:'Batter',xi:'1st',batavg:34.0,runs:544,wkts:0,bowlavg:null,avail:'high',price:7.0,base_price:7.0,note:'Reliable 1st XI opener'},
+  {id:'p12',name:'William Dike',role:'All-rounder',xi:'1st',batavg:26.0,runs:494,wkts:4,bowlavg:37.5,avail:'med',price:6.5,base_price:6.5,note:'15yo, talented all-rounder'},
+  {id:'p13',name:'William Coleman',role:'Batter',xi:'1st',batavg:17.9,runs:466,wkts:0,bowlavg:null,avail:'high',price:6.5,base_price:6.5,note:'Improving 23yo, great form'},
+  {id:'p14',name:'Oscar White',role:'All-rounder',xi:'2nd',batavg:14.0,runs:295,wkts:25,bowlavg:36.9,avail:'high',price:6.0,base_price:6.0,note:'Reliable 2nd XI all-rounder'},
+  {id:'p15',name:'Freddie Fowles',role:'Bowler',xi:'1st',batavg:15.1,runs:106,wkts:18,bowlavg:26.6,avail:'med',price:6.0,base_price:6.0,note:'1st XI bowler'},
+  {id:'p16',name:'Julius Guthrie',role:'All-rounder',xi:'2nd',batavg:24.4,runs:244,wkts:13,bowlavg:25.8,avail:'high',price:5.5,base_price:5.5,note:'Strong 2nd XI all-rounder'},
+  {id:'p17',name:'Cameron McKinnon',role:'Batter',xi:'2nd',batavg:18.8,runs:320,wkts:5,bowlavg:26.4,avail:'high',price:5.5,base_price:5.5,note:'Hit or miss 2nd XI batter'},
+  {id:'p18',name:'Dominic Coleman',role:'WK',xi:'1st',batavg:16.2,runs:162,wkts:0,bowlavg:null,avail:'med',price:5.5,base_price:5.5,note:'1st XI keeper'},
+  {id:'p19',name:'Matt Coleman',role:'Batter',xi:'2nd',batavg:22.8,runs:364,wkts:1,bowlavg:44.0,avail:'high',price:5.5,base_price:5.5,note:'Reliable 2nd XI batter'},
+  {id:'p20',name:'Tom Hatcher',role:'Batter',xi:'2nd',batavg:46.5,runs:93,wkts:2,bowlavg:31.5,avail:'med',price:5.5,base_price:5.5,note:'Classy batting all-rounder'},
+  {id:'p21',name:'Harry Clothier',role:'Bowler',xi:'2nd',batavg:5.2,runs:42,wkts:28,bowlavg:20.0,avail:'high',price:5.5,base_price:5.5,note:'Young reliable 2nd XI bowler'},
+  {id:'p22',name:'Simon Reeves',role:'All-rounder',xi:'2nd',batavg:null,runs:null,wkts:null,bowlavg:null,avail:'med',price:5.5,base_price:5.5,note:'Promising debut'},
+  {id:'p23',name:'James Lewis',role:'Batter',xi:'1st',batavg:25.6,runs:589,wkts:3,bowlavg:66.3,avail:'low',price:5.5,base_price:5.5,note:'Largely unavailable this season'},
+  {id:'p24',name:'Jordan Edmonds',role:'Batter',xi:'2nd',batavg:17.7,runs:53,wkts:0,bowlavg:null,avail:'high',price:5.5,base_price:5.5,note:'Reliable 2nd XI no.3'},
+  {id:'p25',name:'Gary Stockley',role:'Batter',xi:'2nd',batavg:15.5,runs:217,wkts:0,bowlavg:null,avail:'high',price:5.5,base_price:5.5,note:'Consistent 2nd XI batter'},
+  {id:'p26',name:'Fin McKinnon',role:'All-rounder',xi:'2nd',batavg:20.0,runs:80,wkts:14,bowlavg:21.3,avail:'med',price:5.0,base_price:5.0,note:'2nd XI all-rounder'},
+  {id:'p27',name:'Colin Moore',role:'WK',xi:'2nd',batavg:17.1,runs:343,wkts:0,bowlavg:null,avail:'high',price:5.5,base_price:5.5,note:'Club chairman, 2s keeper-batter'},
+  {id:'p28',name:'Adam Ridgeway',role:'Batter',xi:'2nd',batavg:8.2,runs:106,wkts:12,bowlavg:18.4,avail:'low',price:5.0,base_price:5.0,note:'Away in the navy'},
+  {id:'p29',name:'Sam Foster',role:'Bowler',xi:'2nd',batavg:0,runs:0,wkts:null,bowlavg:null,avail:'high',price:5.0,base_price:5.0,note:'Good 2nd XI bowler'},
+  {id:'p30',name:'Martha Coleman',role:'Bowler',xi:'2nd',batavg:3.6,runs:18,wkts:14,bowlavg:14.0,avail:'med',price:5.0,base_price:5.0,note:'Good 2nd XI bowler'},
+  {id:'p31',name:'Thomas Arnold',role:'Bowler',xi:'2nd',batavg:4.3,runs:13,wkts:1,bowlavg:193.0,avail:'med',price:5.0,base_price:5.0,note:'Young developing bowler'},
+  {id:'p32',name:'Thomas Lomas-Walker',role:'Batter',xi:'2nd',batavg:11.8,runs:71,wkts:0,bowlavg:null,avail:'med',price:5.0,base_price:5.0,note:'Young 2s batter, back from uni later'},
+  {id:'p33',name:'Tom Donnelly',role:'Bowler',xi:'2nd',batavg:1.6,runs:11,wkts:14,bowlavg:19.4,avail:'low',price:4.5,base_price:4.5,note:'Could return later in season'},
+  {id:'p34',name:'Richard Brown',role:'Bowler',xi:'2nd',batavg:5.6,runs:28,wkts:9,bowlavg:29.3,avail:'high',price:4.5,base_price:4.5,note:'Very regular player'},
+  {id:'p35',name:'Luke Hedditch',role:'Batter',xi:'2nd',batavg:11.8,runs:33,wkts:0,bowlavg:null,avail:'med',price:5.0,base_price:5.0,note:'Inconsistent 2nd XI batter'},
+  {id:'p36',name:'Layla Coleman',role:'Bowler',xi:'2nd',batavg:null,runs:null,wkts:null,bowlavg:null,avail:'low',price:4.5,base_price:4.5,note:'Similar to Martha, less likely to play'},
+  {id:'p37',name:'Ben Pattle',role:'Bowler',xi:'Both',batavg:6.8,runs:27,wkts:0,bowlavg:null,avail:'med',price:4.5,base_price:4.5,note:'Floats between XIs'},
+  {id:'p38',name:'Harry Lewis',role:'Bowler',xi:'2nd',batavg:9.2,runs:46,wkts:5,bowlavg:33.4,avail:'low',price:4.5,base_price:4.5,note:'Very poor availability'},
+  {id:'p39',name:'Howard Batten',role:'Bowler',xi:'1st',batavg:3.2,runs:13,wkts:1,bowlavg:121.0,avail:'low',price:4.5,base_price:4.5,note:'Rarely plays'},
+  {id:'p40',name:'Oliver York',role:'Bowler',xi:'2nd',batavg:0,runs:0,wkts:5,bowlavg:9.6,avail:'low',price:4.5,base_price:4.5,note:'Young 2s bowler, more available later'},
+  {id:'p41',name:'Daniel Watson',role:'Batter',xi:'2nd',batavg:8.2,runs:98,wkts:1,bowlavg:56.0,avail:'med',price:4.5,base_price:4.5,note:'Occasional contributor'},
+  {id:'p42',name:'Fergus Dodd',role:'Bowler',xi:'2nd',batavg:1.0,runs:2,wkts:1,bowlavg:69.0,avail:'low',price:4.5,base_price:4.5,note:'Poor availability'},
+  {id:'p43',name:'Kev Brewer',role:'Batter',xi:'2nd',batavg:25.0,runs:50,wkts:0,bowlavg:null,avail:'low',price:4.5,base_price:4.5,note:'Fill-in player'},
+  {id:'p44',name:'Will Lloyd',role:'Batter',xi:'2nd',batavg:null,runs:null,wkts:null,bowlavg:null,avail:'med',price:4.5,base_price:4.5,note:'New 2nd XI player'},
+  {id:'p45',name:'James Vear',role:'Batter',xi:'2nd',batavg:0,runs:0,wkts:0,bowlavg:null,avail:'low',price:4.0,base_price:4.0,note:'Emergency fill-in only'},
+];
+
+// ═══════════════════════════════════
+// INIT
+// ═══════════════════════════════════
+async function init(){
+  try {
+    // Load or seed players
+    let {data:dbPlayers,error:pErr} = await sb.from('players').select('*');
+    if(pErr) throw pErr;
+    if(!dbPlayers||dbPlayers.length===0){
+      // Seed default players
+      const {error:sErr} = await sb.from('players').insert(DEFAULT_PLAYERS.map(p=>({
+        id:p.id, name:p.name, role:p.role, xi:p.xi,
+        batavg:p.batavg, runs:p.runs, wkts:p.wkts, bowlavg:p.bowlavg,
+        avail:p.avail, price:p.price, base_price:p.base_price, note:p.note,
+        form_history:[], price_history:[p.price]
+      })));
+      if(sErr) throw sErr;
+      players = DEFAULT_PLAYERS.map(p=>({...p, form_history:[], price_history:[p.price]}));
+    } else {
+      players = dbPlayers.map(p=>({...p, form_history:p.form_history||[], price_history:p.price_history||[p.price]}));
+    }
+
+    // Load managers
+    const {data:dbMgrs} = await sb.from('managers').select('*');
+    managers = dbMgrs||[];
+
+    // Load current week setting
+    const {data:settings} = await sb.from('settings').select('*');
+    const wkSetting = settings?.find(s=>s.key==='current_week');
+    currentWeek = wkSetting ? parseInt(wkSetting.value) : 0;
+
+    // Load week scores for current week
+    if(currentWeek>0){
+      const {data:scores} = await sb.from('week_scores').select('*').eq('week',currentWeek);
+      if(scores) {
+        weekScores[currentWeek]={};
+        scores.forEach(s=>{ weekScores[currentWeek][s.player_id]=s; });
+      }
+    }
+
+    // Restore session
+    if(currentManagerId){
+      const m=managers.find(x=>x.id===currentManagerId);
+      if(m) document.getElementById('current-manager-label').textContent=m.name;
+    }
+
+    hideLoading();
+    renderHome();
+  } catch(e){
+    console.error(e);
+    toast('Error connecting to database: '+e.message,'error');
+    hideLoading();
+  }
+}
+
+function hideLoading(){
+  const ls=document.getElementById('loading-screen');
+  ls.classList.add('hidden');
+  setTimeout(()=>ls.style.display='none',600);
+}
+
+// ═══════════════════════════════════
+// POINTS
+// ═══════════════════════════════════
+function calcPoints(s){
+  if(s.dnp) return 0;
+  let pts=3;
+  const runs=parseInt(s.runs||0);
+  pts+=runs;
+  if(runs>=100) pts+=20; else if(runs>=50) pts+=10; else if(runs>=25) pts+=5;
+  if(s.duck&&runs===0) pts-=5;
+  const wkts=parseInt(s.wkts||0);
+  pts+=wkts*20;
+  if(wkts>=5) pts+=20; else if(wkts>=3) pts+=10;
+  pts+=parseInt(s.maidens||0)*4;
+  pts+=parseInt(s.catches||0)*8;
+  pts+=parseInt(s.ro||0)*10;
+  if(s.mom) pts+=15;
+  return pts;
+}
+
+// ═══════════════════════════════════
+// FORM & PRICES
+// ═══════════════════════════════════
+async function updateFormAndPrices(week){
+  const updates=[];
+  for(const p of players){
+    const recentWks=[week,week-1,week-2].filter(w=>w>0);
+    const recentPts=[];
+    for(const w of recentWks){
+      if(!weekScores[w]){
+        const {data} = await sb.from('week_scores').select('*').eq('week',w).eq('player_id',p.id);
+        if(data&&data[0]) recentPts.push(data[0].pts||0);
+      } else if(weekScores[w][p.id]){
+        recentPts.push(weekScores[w][p.id].pts||0);
+      }
+    }
+    const wScore=weekScores[week]?.[p.id];
+    if(wScore!==undefined){
+      if(!p.form_history) p.form_history=[];
+      p.form_history=[...p.form_history, wScore.pts||0].slice(-6);
+    }
+    if(recentPts.length>=2){
+      const avg=recentPts.reduce((a,b)=>a+b,0)/recentPts.length;
+      let change=avg>=40?0.5:avg>=15?0:avg>=5?-0.5:-0.5;
+      const newPrice=Math.round(Math.min(Math.max(p.base_price*0.7,p.price+change),p.base_price*1.4)*2)/2;
+      p.price=newPrice;
+    }
+    if(!p.price_history) p.price_history=[p.base_price];
+    p.price_history=[...p.price_history,p.price].slice(-20);
+    updates.push({id:p.id,price:p.price,form_history:p.form_history,price_history:p.price_history});
+  }
+  for(const u of updates){
+    await sb.from('players').update({price:u.price,form_history:u.form_history,price_history:u.price_history}).eq('id',u.id);
+  }
+}
+
+function getFormScore(p){
+  if(!p.form_history||p.form_history.length===0) return null;
+  const r=p.form_history.slice(-3);
+  return Math.round(r.reduce((a,b)=>a+b,0)/r.length);
+}
+
+// ═══════════════════════════════════
+// UI HELPERS
+// ═══════════════════════════════════
+function showPage(id,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  if(btn) btn.classList.add('active');
+  if(id==='myteam') renderMyTeam();
+  if(id==='standings') renderStandings();
+  if(id==='players') renderPlayers();
+  if(id==='home') renderHome();
+  if(id==='admin'){renderAdminScoreForm();const cw=document.getElementById('current-week-display');if(cw)cw.textContent=currentWeek;}
+}
+function showSubTab(id,btn){
+  document.getElementById('subtab-pick').style.display=id==='pick'?'block':'none';
+  document.getElementById('subtab-transfers').style.display=id==='transfers'?'block':'none';
+  document.querySelectorAll('#page-myteam .tabs .tab').forEach(t=>t.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  if(id==='transfers') renderTransferTab();
+}
+function showAdminTab(id,btn){
+  ['scores','manage','players-admin'].forEach(t=>{const el=document.getElementById('admin-'+t);if(el)el.style.display=t===id?'block':'none';});
+  document.querySelectorAll('#page-admin .tab').forEach(t=>t.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  if(id==='manage') renderManagersList();
+  if(id==='players-admin') renderAdminPlayerTable();
+}
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function toast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show'+(type?' '+type:'');
+  setTimeout(()=>t.className='toast',3500);
+}
+function roleBadge(r){
+  const m={Batter:'b-bat',Bowler:'b-bowl','All-rounder':'b-ar',WK:'b-wk'};
+  const l={Batter:'Bat',Bowler:'Bowl','All-rounder':'AR',WK:'WK'};
+  return `<span class="badge ${m[r]||''}">${l[r]||r}</span>`;
+}
+function priceClass(p){return p>=9.5?'price-gold':p>=7?'price-green':'price-grey';}
+function formDots(p){
+  const h=p.form_history||[];
+  const r=h.slice(-3);
+  if(r.length===0) return '<span style="font-size:11px;color:#999">No data</span>';
+  const avg=Math.round(r.reduce((a,b)=>a+b,0)/r.length);
+  const dots=r.map(v=>`<div class="dot ${v>=40?'dot-high':v>=15?'dot-mid':'dot-low'}" title="${v}pts"></div>`).join('');
+  return `<div style="display:flex;align-items:center;gap:6px"><div class="form-dots">${dots}</div><span style="font-size:11px;color:var(--text-light)">${avg} avg</span></div>`;
+}
+function priceTrend(p){
+  const h=p.price_history||[];
+  if(h.length<2) return '<span class="price-same">—</span>';
+  const diff=(p.price-h[h.length-2]).toFixed(1);
+  if(diff>0) return `<span class="price-up">▲ £${diff}m</span>`;
+  if(diff<0) return `<span class="price-dn">▼ £${Math.abs(diff)}m</span>`;
+  return '<span class="price-same">—</span>';
+}
+function getCurrentManager(){return managers.find(m=>m.id===currentManagerId)||null;}
+
+// ═══════════════════════════════════
+// ADMIN
+// ═══════════════════════════════════
+function checkAdmin(){
+  const pw=document.getElementById('admin-pw').value;
+  if(pw===ADMIN_PASSWORD){
+    isAdmin=true;
+    closeModal('modal-admin');
+    document.getElementById('admin-nav').style.display='inline-block';
+    document.getElementById('admin-btn').textContent='ADMIN ✓';
+    document.getElementById('admin-btn').style.background='#2D7A3D';
+    toast('Admin access granted','gold');
+  } else { toast('Incorrect password','error'); }
+  document.getElementById('admin-pw').value='';
+}
+
+function renderAdminScoreForm(){
+  const rows=document.getElementById('score-entry-rows');
+  if(!rows) return;
+  const sorted=[...players].sort((a,b)=>a.name.localeCompare(b.name));
+  rows.innerHTML=sorted.map(p=>`
+    <div class="score-row" data-pid="${p.id}">
+      <div style="color:rgba(245,240,232,0.9);font-weight:500;font-size:12px">${p.name}</div>
+      <input type="number" class="sc-runs" min="0" placeholder="0"/>
+      <input type="number" class="sc-wkts" min="0" max="10" placeholder="0"/>
+      <input type="number" class="sc-maidens" min="0" placeholder="0"/>
+      <input type="number" class="sc-catches" min="0" placeholder="0"/>
+      <input type="number" class="sc-ro" min="0" placeholder="0"/>
+      <select class="sc-duck" style="background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.2);color:white;padding:5px"><option value="0">No</option><option value="1">Duck</option></select>
+      <select class="sc-mom" style="background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.2);color:white;padding:5px"><option value="0">No</option><option value="1">MoM</option></select>
+    </div>`).join('');
+}
+
+async function submitScores(){
+  const week=parseInt(document.getElementById('score-week').value);
+  if(!week||week<1){toast('Enter a valid week number','error');return;}
+  toast('Submitting scores...');
+
+  const scoreInserts=[];
+  document.querySelectorAll('#score-entry-rows .score-row').forEach(row=>{
+    const pid=row.dataset.pid;
+    const runs=parseInt(row.querySelector('.sc-runs').value)||0;
+    const wkts=parseInt(row.querySelector('.sc-wkts').value)||0;
+    const maidens=parseInt(row.querySelector('.sc-maidens').value)||0;
+    const catches=parseInt(row.querySelector('.sc-catches').value)||0;
+    const ro=parseInt(row.querySelector('.sc-ro').value)||0;
+    const duck=row.querySelector('.sc-duck').value==='1';
+    const mom=row.querySelector('.sc-mom').value==='1';
+    if(runs||wkts||maidens||catches||ro||duck||mom){
+      const pts=calcPoints({runs,wkts,maidens,catches,ro,duck,mom});
+      scoreInserts.push({week,player_id:pid,runs,wkts,maidens,catches,ro,duck,mom,pts});
+    }
+  });
+
+  // Upsert scores
+  if(scoreInserts.length>0){
+    const {error} = await sb.from('week_scores').upsert(scoreInserts,{onConflict:'week,player_id'});
+    if(error){toast('Error saving scores: '+error.message,'error');return;}
+  }
+
+  // Cache locally
+  weekScores[week]={};
+  scoreInserts.forEach(s=>{ weekScores[week][s.player_id]=s; });
+
+  // Update manager points
+  for(const m of managers){
+    let weekPts=0;
+    const starters=m.starters&&m.starters.length>0?m.starters:(m.squad||[]).slice(0,STARTERS);
+    const bench=(m.squad||[]).filter(id=>!starters.includes(id));
+
+    for(const pid of starters){
+      const score=weekScores[week]?.[pid];
+      if(!score){
+        // Try bench cover
+        for(const bid of bench){
+          const bs=weekScores[week]?.[bid];
+          if(bs){weekPts+=bs.pts;break;}
+        }
+      } else {
+        let p=score.pts;
+        if(pid===m.captain) p=Math.round(p*1.5);
+        else if(pid===m.vc&&!weekScores[week]?.[m.captain]) p=Math.round(p*1.5);
+        weekPts+=p;
+      }
+    }
+    weekPts-=(m.transfer_penalty||0);
+    const newTotal=(m.total_pts||0)+weekPts;
+    const newWeeklyPts=[...(m.weekly_pts||[])];
+    newWeeklyPts[week]=weekPts;
+
+    await sb.from('managers').update({
+      week_pts:weekPts, total_pts:newTotal,
+      weekly_pts:newWeeklyPts, transfer_penalty:0, free_transfers:1
+    }).eq('id',m.id);
+
+    m.week_pts=weekPts; m.total_pts=newTotal;
+    m.weekly_pts=newWeeklyPts; m.transfer_penalty=0; m.free_transfers=1;
+  }
+
+  // Update week setting
+  if(week>currentWeek){
+    currentWeek=week;
+    await sb.from('settings').upsert({key:'current_week',value:String(week)},{onConflict:'key'});
+  }
+
+  await updateFormAndPrices(week);
+  toast(`Week ${week} scores submitted! Prices & form updated.`,'gold');
+  renderHome();
+}
+
+function clearScoreForm(){
+  document.querySelectorAll('#score-entry-rows .score-row').forEach(row=>{
+    row.querySelectorAll('input').forEach(i=>i.value='');
+    row.querySelectorAll('select').forEach(s=>s.value='0');
+  });
+}
+
+async function advanceWeek(){
+  currentWeek++;
+  await sb.from('settings').upsert({key:'current_week',value:String(currentWeek)},{onConflict:'key'});
+  for(const m of managers){
+    await sb.from('managers').update({free_transfers:1}).eq('id',m.id);
+    m.free_transfers=1;
+  }
+  toast(`Advanced to Week ${currentWeek}`,'gold');
+  document.getElementById('current-week-display').textContent=currentWeek;
+}
+
+async function resetWeekTransfers(){
+  for(const m of managers){
+    await sb.from('managers').update({free_transfers:1,transfer_penalty:0}).eq('id',m.id);
+    m.free_transfers=1; m.transfer_penalty=0;
+  }
+  toast('Transfer allowances reset');
+}
+
+function renderManagersList(){
+  const el=document.getElementById('managers-list');
+  if(!el) return;
+  if(managers.length===0){el.innerHTML='<p style="font-size:13px;color:var(--text-light)">No managers yet.</p>';return;}
+  el.innerHTML=`<table><thead><tr><th>Manager</th><th>Team</th><th>Squad</th><th>Total Pts</th><th>Wildcard</th></tr></thead><tbody>${
+    managers.map(m=>`<tr><td>${m.name}</td><td>${m.team}</td><td>${(m.squad||[]).length}/13</td><td class="pts-total">${m.total_pts||0}</td><td>${m.wildcard_used?'Used':'Available'}</td></tr>`).join('')
+  }</tbody></table>`;
+}
+
+function renderAdminPlayerTable(){
+  const tbody=document.getElementById('admin-player-table');
+  if(!tbody) return;
+  const sorted=[...players].sort((a,b)=>b.price-a.price);
+  tbody.innerHTML=sorted.map(p=>`
+    <tr>
+      <td style="font-weight:500">${p.name}</td>
+      <td class="${priceClass(p.price)}">£${p.price.toFixed(1)}m</td>
+      <td><input type="number" step="0.5" min="3" max="15" value="${p.price.toFixed(1)}" id="ap-${p.id}" style="width:80px"/></td>
+      <td><select id="av-${p.id}" style="width:100px">
+        <option value="high" ${p.avail==='high'?'selected':''}>High</option>
+        <option value="med" ${p.avail==='med'?'selected':''}>Med</option>
+        <option value="low" ${p.avail==='low'?'selected':''}>Low</option>
+      </select></td>
+      <td><button class="btn btn-sm" onclick="updatePlayerPrice('${p.id}')">Save</button></td>
+    </tr>`).join('');
+}
+
+async function updatePlayerPrice(pid){
+  const p=players.find(x=>x.id===pid);
+  if(!p) return;
+  const newPrice=parseFloat(document.getElementById('ap-'+pid).value);
+  const newAvail=document.getElementById('av-'+pid).value;
+  if(isNaN(newPrice)) return;
+  p.price=newPrice; p.avail=newAvail;
+  await sb.from('players').update({price:newPrice,avail:newAvail}).eq('id',pid);
+  toast(`${p.name} updated`,'gold');
+}
+
+async function addNewPlayer(){
+  const name=document.getElementById('new-player-name').value.trim();
+  if(!name){toast('Enter a player name','error');return;}
+  const price=parseFloat(document.getElementById('new-player-price').value)||5.0;
+  const p={
+    id:'p'+Date.now(), name,
+    role:document.getElementById('new-player-role').value,
+    xi:document.getElementById('new-player-xi').value,
+    price, base_price:price,
+    avail:document.getElementById('new-player-avail').value,
+    batavg:parseFloat(document.getElementById('new-player-batavg').value)||null,
+    wkts:parseInt(document.getElementById('new-player-wkts').value)||null,
+    bowlavg:parseFloat(document.getElementById('new-player-bowlavg').value)||null,
+    form_history:[], price_history:[price], note:''
+  };
+  const {error} = await sb.from('players').insert([p]);
+  if(error){toast('Error adding player: '+error.message,'error');return;}
+  players.push(p);
+  toast(`${name} added`,'gold');
+  document.getElementById('new-player-name').value='';
+  renderAdminPlayerTable();
+}
+
+// ═══════════════════════════════════
+// MANAGER REGISTRATION
+// ═══════════════════════════════════
+async function registerManager(){
+  const name=document.getElementById('reg-name').value.trim();
+  const team=document.getElementById('reg-team').value.trim();
+  if(!name||!team){toast('Please fill in both fields','error');return;}
+  const id='m'+Date.now();
+  const manager={id,name,team,squad:[],starters:[],captain:null,vc:null,total_pts:0,week_pts:0,free_transfers:1,wildcard_used:false,transfer_penalty:0,weekly_pts:[]};
+  const {error} = await sb.from('managers').insert([manager]);
+  if(error){toast('Error joining: '+error.message,'error');return;}
+  managers.push(manager);
+  currentManagerId=id;
+  localStorage.setItem('stalbridge_manager_id',id);
+  closeModal('modal-register');
+  toast(`Welcome ${name}! Now pick your squad.`,'gold');
+  document.getElementById('current-manager-label').textContent=name;
+  showPage('myteam',document.querySelectorAll('.nav-btn')[3]);
+}
+
+// ═══════════════════════════════════
+// HOME
+// ═══════════════════════════════════
+function renderHome(){
+  document.getElementById('h-week').textContent=currentWeek||0;
+  document.getElementById('h-managers').textContent=managers.length;
+  const sorted=[...managers].sort((a,b)=>(b.total_pts||0)-(a.total_pts||0));
+  document.getElementById('h-leader').textContent=sorted[0]?.team||'—';
+  const topScore=Math.max(0,...managers.map(m=>m.week_pts||0));
+  document.getElementById('h-topscore').textContent=topScore||'—';
+
+  const ws=weekScores[currentWeek];
+  const tp=document.getElementById('top-performers-home');
+  if(!ws||Object.keys(ws).length===0){
+    tp.innerHTML='<p style="font-size:13px;color:var(--text-light);font-style:italic">No scores entered yet for this week.</p>';
+    return;
+  }
+  const top=Object.entries(ws).sort((a,b)=>b[1].pts-a[1].pts).slice(0,5);
+  tp.innerHTML=`<table><thead><tr><th>#</th><th>Player</th><th>Runs</th><th>Wkts</th><th>Points</th></tr></thead><tbody>${
+    top.map(([pid,s],i)=>{
+      const p=players.find(x=>x.id===pid);
+      return `<tr><td class="rank">${i+1}</td><td style="font-weight:500">${p?.name||pid}</td><td class="dim">${s.runs||0}</td><td class="dim">${s.wkts||0}</td><td class="pts-total">${s.pts}</td></tr>`;
+    }).join('')
+  }</tbody></table>`;
+}
+
+// ═══════════════════════════════════
+// STANDINGS
+// ═══════════════════════════════════
+function renderStandings(){
+  document.getElementById('standings-week-badge').textContent=`Week ${currentWeek}`;
+  document.getElementById('standings-sub').textContent=currentWeek?`After ${currentWeek} week${currentWeek>1?'s':''}`:' Season not started yet';
+  const sorted=[...managers].sort((a,b)=>(b.total_pts||0)-(a.total_pts||0));
+  const rankClass=i=>i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank';
+  document.getElementById('standings-body').innerHTML=sorted.length===0?
+    '<tr><td colspan="6" style="text-align:center;color:var(--text-light);font-style:italic;padding:2rem">No managers registered yet.</td></tr>':
+    sorted.map((m,i)=>`<tr>
+      <td><span class="${rankClass(i)}">${i+1}</span></td>
+      <td class="manager-name">${m.name}</td>
+      <td>${m.team}</td>
+      <td class="pts-week">${m.week_pts>0?'+'+m.week_pts:'—'}</td>
+      <td class="pts-total">${m.total_pts||0}</td>
+      <td>${m.wildcard_used?'<span style="color:var(--text-light);font-size:12px">Used</span>':'<span style="color:#2D7A3D;font-size:12px">Available</span>'}</td>
+    </tr>`).join('');
+}
+
+// ═══════════════════════════════════
+// PLAYERS PAGE
+// ═══════════════════════════════════
+function renderPlayers(){
+  const role=document.getElementById('filter-role')?.value||'';
+  const search=document.getElementById('filter-search')?.value?.toLowerCase()||'';
+  let list=players.filter(p=>{
+    if(role&&p.role!==role) return false;
+    if(search&&!p.name.toLowerCase().includes(search)) return false;
+    return true;
+  }).sort((a,b)=>b.price-a.price);
+  document.getElementById('players-body').innerHTML=list.map(p=>`
+    <tr>
+      <td style="font-weight:500">${p.name}</td>
+      <td>${roleBadge(p.role)}</td>
+      <td class="${priceClass(p.price)}">£${p.price.toFixed(1)}m</td>
+      <td class="dim">${p.batavg!=null?Number(p.batavg).toFixed(1):'—'}</td>
+      <td class="dim">${p.wkts!=null?p.wkts:'—'}</td>
+      <td class="dim">${p.bowlavg!=null&&p.bowlavg<500?Number(p.bowlavg).toFixed(1):'—'}</td>
+      <td>${formDots(p)}</td>
+      <td>${priceTrend(p)}</td>
+    </tr>`).join('');
+}
+
+// ═══════════════════════════════════
+// MY TEAM
+// ═══════════════════════════════════
+function renderMyTeam(){
+  const m=getCurrentManager();
+  document.getElementById('myteam-no-manager').style.display=m?'none':'block';
+  document.getElementById('myteam-main').style.display=m?'block':'none';
+  if(!m) return;
+  document.getElementById('myteam-name').textContent=m.team;
+  document.getElementById('myteam-manager').textContent=`Manager: ${m.name} · Total: ${m.total_pts||0} pts · This week: ${m.week_pts||0} pts`;
+  document.getElementById('myteam-actions').innerHTML=`
+    <span class="chip ${m.wildcard_used?'used':''}" onclick="${m.wildcard_used?'':'activateWildcard()'}">🃏 Wildcard${m.wildcard_used?' (used)':''}</span>
+    <span class="chip gold" onclick="openCaptainModal()">⭐ Captains</span>`;
+  updateBudgetDisplay(m);
+  renderPitch(m);
+  renderPickPlayers();
+}
+
+function updateBudgetDisplay(m){
+  const spent=(m.squad||[]).reduce((s,pid)=>{const p=players.find(x=>x.id===pid);return s+(p?p.price:0);},0);
+  const remaining=BUDGET-spent;
+  const pct=Math.max(0,Math.min(100,(remaining/BUDGET)*100));
+  document.getElementById('budget-display').textContent=`£${remaining.toFixed(1)}m remaining`;
+  const bar=document.getElementById('budget-bar');
+  bar.style.width=pct+'%';
+  bar.className='budget-bar'+(remaining<5?' over':remaining<15?' warning':'');
+  document.getElementById('squad-count').textContent=`${(m.squad||[]).length}/${SQUAD_SIZE} players`;
+  const ft=m.free_transfers||1;
+  document.getElementById('transfer-info-bar').textContent=`${ft} free transfer${ft!==1?'s':''} remaining`;
+}
+
+function renderPitch(m){
+  if(!m.squad||m.squad.length===0){
+    document.getElementById('pitch-starters').innerHTML='<div style="color:rgba(255,255,255,0.4);font-size:13px">Pick your players below</div>';
+    document.getElementById('pitch-bench').innerHTML='';
+    return;
+  }
+  const starters=m.starters&&m.starters.length>0?m.starters:m.squad.slice(0,STARTERS);
+  const bench=m.squad.filter(id=>!starters.includes(id));
+  const pCard=(pid,isBench)=>{
+    const p=players.find(x=>x.id===pid);
+    if(!p) return '';
+    const isCap=pid===m.captain, isVC=pid===m.vc;
+    return `<div class="pitch-player ${isCap?'is-captain':''} ${isVC&&!isCap?'is-vc':''}" onclick="toggleStarterBench('${pid}')">
+      <div class="pitch-player-name">${p.name.split(' ').slice(-1)[0]}</div>
+      <div class="pitch-player-price">£${Number(p.price).toFixed(1)}m</div>
+      ${isCap?'<div style="font-size:9px;color:var(--gold-light);font-weight:700">C</div>':''}
+      ${isVC&&!isCap?'<div style="font-size:9px;color:rgba(245,240,232,0.7)">VC</div>':''}
+    </div>`;
+  };
+  document.getElementById('pitch-starters').innerHTML=starters.map(pid=>pCard(pid,false)).join('');
+  document.getElementById('pitch-bench').innerHTML=bench.map(pid=>pCard(pid,true)).join('');
+}
+
+async function toggleStarterBench(pid){
+  const m=getCurrentManager();
+  if(!m) return;
+  if(!m.starters||m.starters.length===0) m.starters=(m.squad||[]).slice(0,STARTERS);
+  if(m.starters.includes(pid)){
+    const bench=m.squad.filter(id=>!m.starters.includes(id));
+    if(bench.length<2) m.starters=m.starters.filter(id=>id!==pid);
+  } else {
+    if(m.starters.length<STARTERS) m.starters.push(pid);
+  }
+  await sb.from('managers').update({starters:m.starters}).eq('id',m.id);
+  renderPitch(m);
+}
+
+function renderPickPlayers(){
+  const m=getCurrentManager();
+  const role=document.getElementById('pick-role')?.value||'';
+  const xi=document.getElementById('pick-xi')?.value||'';
+  const search=document.getElementById('pick-search')?.value?.toLowerCase()||'';
+  const sortBy=document.getElementById('pick-sort')?.value||'price';
+  const spent=(m?.squad||[]).reduce((s,pid)=>{const p=players.find(x=>x.id===pid);return s+(p?p.price:0);},0);
+  const remaining=BUDGET-spent;
+
+  let list=players.filter(p=>{
+    if(role&&p.role!==role) return false;
+    if(xi&&p.xi!==xi&&p.xi!=='Both') return false;
+    if(search&&!p.name.toLowerCase().includes(search)) return false;
+    return true;
+  }).sort((a,b)=>{
+    if(sortBy==='form') return (getFormScore(b)||0)-(getFormScore(a)||0);
+    if(sortBy==='batavg') return (b.batavg||0)-(a.batavg||0);
+    if(sortBy==='wkts') return (b.wkts||0)-(a.wkts||0);
+    return b.price-a.price;
+  });
+
+  const grid=document.getElementById('pick-player-grid');
+  if(!grid) return;
+  grid.innerHTML=list.map(p=>{
+    const inSquad=m&&(m.squad||[]).includes(p.id);
+    const isStarter=m&&m.starters&&m.starters.includes(p.id);
+    const isBench=inSquad&&!isStarter;
+    const isCap=m&&m.captain===p.id, isVC=m&&m.vc===p.id;
+    const cantAfford=!inSquad&&p.price>remaining+0.01;
+    const squadFull=!inSquad&&m&&(m.squad||[]).length>=SQUAD_SIZE;
+    const disabled=(cantAfford||squadFull)&&!inSquad;
+    return `<div class="player-card ${inSquad?(isStarter?'starter':'bench-player'):''} ${disabled?'disabled':''}"
+      onclick="${!disabled||inSquad?`togglePlayer('${p.id}')`:''}" >
+      <div class="player-sel-indicator">✓</div>
+      ${isCap?'<div class="cap-label cap-c">C</div>':''}
+      ${isVC&&!isCap?'<div class="cap-label cap-vc">VC</div>':''}
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+        <div class="player-card-name">${p.name}</div>${roleBadge(p.role)}
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="${priceClass(p.price)}" style="font-family:'DM Mono',monospace;font-size:13px;font-weight:600">£${Number(p.price).toFixed(1)}m</div>
+        <div style="font-size:11px;color:var(--text-light)">${p.xi} XI</div>
+      </div>
+      <div style="font-size:11px;color:var(--text-light);margin-top:4px">${p.batavg!=null?`Bat: ${Number(p.batavg).toFixed(1)}`:''}${p.wkts!=null?` · ${p.wkts} wkts`:''}</div>
+      <div style="margin-top:4px">${formDots(p)}</div>
+      ${inSquad?`<div style="font-size:10px;color:${isStarter?'#2D7A3D':'#C9A84C'};font-weight:600;margin-top:4px">${isStarter?'● STARTER':'○ BENCH'}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+async function togglePlayer(pid){
+  const m=getCurrentManager();
+  if(!m){openModal('modal-register');return;}
+  if(!m.squad) m.squad=[];
+  if(m.squad.includes(pid)){
+    m.squad=m.squad.filter(id=>id!==pid);
+    if(m.starters) m.starters=m.starters.filter(id=>id!==pid);
+    if(m.captain===pid) m.captain=null;
+    if(m.vc===pid) m.vc=null;
+  } else {
+    if(m.squad.length>=SQUAD_SIZE){toast('Squad full — remove a player first','error');return;}
+    const p=players.find(x=>x.id===pid);
+    const spent=m.squad.reduce((s,id)=>{const pp=players.find(x=>x.id===id);return s+(pp?pp.price:0);},0);
+    if(spent+p.price>BUDGET+0.01){toast('Not enough budget!','error');return;}
+    const newRoles=[...m.squad.map(id=>players.find(x=>x.id===id)?.role),p.role];
+    if(p.role==='WK'&&newRoles.filter(r=>r==='WK').length>2){toast('Max 2 wicket-keepers','error');return;}
+    m.squad.push(pid);
+    if(!m.starters) m.starters=[];
+    if(m.starters.length<STARTERS) m.starters.push(pid);
+  }
+  await sb.from('managers').update({squad:m.squad,starters:m.starters,captain:m.captain,vc:m.vc}).eq('id',m.id);
+  updateBudgetDisplay(m);
+  renderPitch(m);
+  renderPickPlayers();
+}
+
+// ═══════════════════════════════════
+// CAPTAINS
+// ═══════════════════════════════════
+function openCaptainModal(){
+  const m=getCurrentManager();
+  if(!m||!m.squad||m.squad.length===0){toast('Pick your squad first','error');return;}
+  const opts=m.squad.map(pid=>{const p=players.find(x=>x.id===pid);return `<option value="${pid}" ${m.captain===pid?'selected':''}>${p?.name}</option>`;}).join('');
+  document.getElementById('cap-select').innerHTML=opts;
+  document.getElementById('vc-select').innerHTML=opts;
+  if(m.vc) document.getElementById('vc-select').value=m.vc;
+  openModal('modal-captain');
+}
+async function saveCaptains(){
+  const m=getCurrentManager();
+  if(!m) return;
+  const cap=document.getElementById('cap-select').value;
+  const vc=document.getElementById('vc-select').value;
+  if(cap===vc){toast('Captain and vice-captain must be different','error');return;}
+  m.captain=cap; m.vc=vc;
+  await sb.from('managers').update({captain:cap,vc:vc}).eq('id',m.id);
+  closeModal('modal-captain');
+  toast('Captains saved!','gold');
+  renderPitch(m);
+  renderPickPlayers();
+}
+
+// ═══════════════════════════════════
+// TRANSFERS
+// ═══════════════════════════════════
+function renderTransferTab(){
+  const m=getCurrentManager();
+  if(!m) return;
+  document.getElementById('free-transfers-display').textContent=m.free_transfers||1;
+  document.getElementById('wildcard-display').textContent=m.wildcard_used?'✗':'✓';
+  document.getElementById('transfer-cost-display').textContent=(m.transfer_penalty||0)+' pts';
+}
+function openTransferModal(){
+  const m=getCurrentManager();
+  if(!m||!m.squad||m.squad.length===0){toast('No squad to transfer from','error');return;}
+  const ft=m.free_transfers||1;
+  document.getElementById('transfer-info-text').textContent=ft>0?'1 free transfer available':'No free transfers — this will cost 4 points';
+  document.getElementById('transfer-out').innerHTML=m.squad.map(pid=>{const p=players.find(x=>x.id===pid);return `<option value="${pid}">${p?.name} (£${Number(p?.price).toFixed(1)}m)</option>`;}).join('');
+  document.getElementById('transfer-in').innerHTML=players.filter(p=>!(m.squad||[]).includes(p.id)).sort((a,b)=>b.price-a.price).map(p=>`<option value="${p.id}">${p.name} (£${Number(p.price).toFixed(1)}m)</option>`).join('');
+  document.getElementById('transfer-out').onchange=updateTransferCost;
+  updateTransferCost();
+  openModal('modal-transfer');
+}
+function updateTransferCost(){
+  const m=getCurrentManager();
+  if(!m) return;
+  const outId=document.getElementById('transfer-out').value;
+  const inId=document.getElementById('transfer-in').value;
+  const outP=players.find(p=>p.id===outId), inP=players.find(p=>p.id===inId);
+  if(!outP||!inP) return;
+  const spent=(m.squad||[]).reduce((s,pid)=>{const p=players.find(x=>x.id===pid);return s+(pid===outId?0:(p?p.price:0));},0);
+  const canAfford=spent+inP.price<=BUDGET+0.01;
+  const ft=m.free_transfers||1;
+  document.getElementById('transfer-cost-info').innerHTML=`Budget after: £${(BUDGET-spent-inP.price).toFixed(1)}m ${!canAfford?'<span style="color:var(--red)">⚠ Over budget</span>':''} &nbsp;·&nbsp; Cost: <strong>${ft>0?'Free':'-4 pts'}</strong>`;
+}
+async function confirmTransfer(){
+  const m=getCurrentManager();
+  if(!m) return;
+  const outId=document.getElementById('transfer-out').value;
+  const inId=document.getElementById('transfer-in').value;
+  if(outId===inId){toast('Select different players','error');return;}
+  const inP=players.find(p=>p.id===inId);
+  const spent=(m.squad||[]).reduce((s,pid)=>{const p=players.find(x=>x.id===pid);return s+(pid===outId?0:(p?p.price:0));},0);
+  if(spent+inP.price>BUDGET+0.01){toast('Not enough budget','error');return;}
+  const newRoles=[...(m.squad||[]).filter(id=>id!==outId).map(id=>players.find(x=>x.id===id)?.role),inP.role];
+  if(inP.role==='WK'&&newRoles.filter(r=>r==='WK').length>2){toast('Max 2 wicket-keepers','error');return;}
+  const ft=m.free_transfers||1;
+  if(ft<=0) m.transfer_penalty=(m.transfer_penalty||0)+4;
+  else m.free_transfers=ft-1;
+  m.squad=(m.squad||[]).filter(id=>id!==outId).concat(inId);
+  if(m.starters){
+    if(m.starters.includes(outId)) m.starters=m.starters.filter(id=>id!==outId).concat(inId);
+  }
+  if(m.captain===outId) m.captain=null;
+  if(m.vc===outId) m.vc=null;
+  await sb.from('managers').update({squad:m.squad,starters:m.starters,captain:m.captain,vc:m.vc,free_transfers:m.free_transfers,transfer_penalty:m.transfer_penalty}).eq('id',m.id);
+  closeModal('modal-transfer');
+  toast(`Transfer complete · ${ft>0?'Free transfer used':'-4 pts applied'}`,'gold');
+  renderMyTeam();
+}
+async function activateWildcard(){
+  const m=getCurrentManager();
+  if(!m){toast('No manager found','error');return;}
+  if(m.wildcard_used){toast('Wildcard already used this season','error');return;}
+  if(!confirm('Play your Wildcard? This resets your entire squad for free — once per season.')) return;
+  m.wildcard_used=true; m.squad=[]; m.starters=[]; m.captain=null; m.vc=null; m.transfer_penalty=0; m.free_transfers=1;
+  await sb.from('managers').update({wildcard_used:true,squad:[],starters:[],captain:null,vc:null,transfer_penalty:0,free_transfers:1}).eq('id',m.id);
+  toast('Wildcard activated! Pick your new squad.','gold');
+  renderMyTeam();
+}
+
+// ═══════════════════════════════════
+// START
+// ═══════════════════════════════════
+init();
+</script>
+</body>
+</html>
